@@ -6,9 +6,7 @@ BATCH_SIZES=(16)
 
 # 모델 리스트
 MODELS=(
-    "state-spaces/mamba2-1.3B"
-    "state-spaces/mamba2-2.7B"
-    "pretrained_models/mamba2-8b-converted"
+    "state-spaces/mamba2-130m"
 )
 
 for model in "${MODELS[@]}"; do

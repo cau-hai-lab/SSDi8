@@ -28,11 +28,11 @@ from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
 
 from utils import set_deterministic
 from utils import get_quantize_options
-from quamba.megatron_utils import _GPTSentencePieceTokenizer
+from ssdi8.megatron_utils import _GPTSentencePieceTokenizer
 from quamba.quamba_mixer_seq import QuambaLMHeadModel
-from quamba.modelutils_mamba import quantize_model_mamba
+from ssdi8.modelutils_mamba import quantize_model_mamba
 from quamba.qMambaLayer import W4A8QMamba, W4A16QMamba, W8A8QMamba
-from quamba.qMamba2 import W4A8QMamba2, W4A16QMamba2, W8A8QMamba2
+from ssdi8.qMamba2 import W4A8QMamba2, W4A16QMamba2, W8A8QMamba2
 
 TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
 

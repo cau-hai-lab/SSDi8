@@ -1,3 +1,7 @@
+"""
+This file is a modified version of the original file from the Quamba repo.
+https://github.com/enyac-group/Quamba
+"""
 import os
 import json
 import random
@@ -6,17 +10,14 @@ import numpy as np
 
 import torch
 from transformers import (
-    AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig
 )
 from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
-from quamba.megatron_utils import _GPTSentencePieceTokenizer
-from quamba.quamba_mixer_seq import QuambaLMHeadModel
+from ssdi8.megatron_utils import _GPTSentencePieceTokenizer
 
 
 def build_mamba_and_tokenizer(args, model_type="mamba"):
-    is_quamba = False
+    is_ssdi8 = False
     device = "cuda"
     dtype = torch.float16 # use half, otherwise real quant won't run
     if model_type == "mamba" or model_type == "mamba2":
@@ -28,24 +29,26 @@ def build_mamba_and_tokenizer(args, model_type="mamba"):
             tokenizer_ckpt = os.path.join(args.model, "mt_nlg_plus_multilingual_ja_zh_the_stack_frac_015_256k.model")
             tokenizer = _GPTSentencePieceTokenizer(tokenizer_ckpt)
         model = MambaLMHeadModel.from_pretrained(args.model, device=device, dtype=dtype)
-    elif model_type == "quamba" or model_type == "quamba2":
-        assert args.pretrained_dir, "Please specify the --pretrained_dir for quamba models"
-        quantized_model_path = os.path.join(args.pretrained_dir, args.model)
-        assert os.path.exists(quantized_model_path), f"Quantized model {quantized_model_path} not found"
-        if "quamba2-8b" not in args.model:
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}, only support 'mamba', 'mamba2''")
+    return model, tokenizer, is_ssdi8
+
+def build_mamba_and_tokenizer_hybrid(args, model_type="mamba"):
+    is_ssdi8 = False
+    device = "cuda"
+    dtype = torch.float16 # use half, otherwise real quant won't run
+    if model_type == "mamba" or model_type == "mamba2":
+        if "mamba2-8b" not in args.model:
             tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b", resume_download=None)
         else:
             # NOTE(hychiang): Special handle for mamba2-8b's tokenizer from NVIDIA Megatron
-            # FIXME: the model and tokenizer will be initizlied again in modelutils_mamba.py
-            tokenizer_ckpt = os.path.join(args.pretrained_dir, args.model, "mt_nlg_plus_multilingual_ja_zh_the_stack_frac_015_256k.model")
+            # FIXME: hardcode the tokenizer file name for now
+            tokenizer_ckpt = os.path.join(args.model, "mt_nlg_plus_multilingual_ja_zh_the_stack_frac_015_256k.model")
             tokenizer = _GPTSentencePieceTokenizer(tokenizer_ckpt)
-        model = QuambaLMHeadModel.from_pretrained(quantized_model_path, device="cuda")
-        is_quamba = True
+        model = MambaLMHeadModel.from_pretrained(args.model, device=device, dtype=dtype)
     else:
-        raise ValueError(f"Unsupported model type: {model_type}, only support 'mamba', 'mamba2', 'quamba' and 'quamba2'")
-    return model, tokenizer, is_quamba
-
-
+        raise ValueError(f"Unsupported model type: {model_type}, only support 'mamba', 'mamba2'")
+    return model, tokenizer, is_ssdi8
 
 def set_deterministic(seed):
     # Fix all possible random seef for reproduce
@@ -77,10 +80,6 @@ def get_quantize_options(parser):
     )
     # quantization parameters
     parser.add_argument(
-        '--group_heads',  action='store_true', default=False,
-        help='Whether to group heads during the reordering (default: False)'
-    )
-    parser.add_argument(
         "--quantize_embedding", action='store_true', default=False,
         help="Whether to quantize the embedding layer (default: False)"
     )
@@ -100,54 +99,18 @@ def get_quantize_options(parser):
         '--a_bits', type=int, default=8,
         help='The bit-width for activations applied in the real quantization (default: 8)'
     )
-    parser.add_argument(
-        '--hybrid_blocks', action='store_true', default=False,
-        help='Whether to create hybrid blocks for configuring act_bits of blocks in a dynamic fashion.'
-    )
-    parser.add_argument(
-        '--hybrid_blocks_config', type=str, default=None,
-        help='Path to the the configuration for hybrid blocks'
-    )
-    #############################################################Smooth###############################################################
-    parser.add_argument(
-        '--apply_smoothing', action='store_true', default=False,
-        help='Whether to apply the smoothing inp/out for quantization (default: False)'  
-    )
+
     parser.add_argument(
         '--apply_hadamard', action='store_true', default=False,
         help='Whether to apply the Hadamard transform for quantization (default: False)'
-    )
-    parser.add_argument(
-        '--smoothing_alpha', type=float, default=0.7,
-        help='The alpha value for smoothing (default: 0.7)'
-    )
-    parser.add_argument(
-        '--smoothing_out_alpha', type=float, default=0.8,
-        help='The alpha value for smoothing (default: 0.7)'
-    )
-    parser.add_argument(
-        '--apply_out_smoothing', action='store_true', default=False
-    )
-    parser.add_argument(
-        '--apply_inp_smoothing', action='store_true', default=False
-    )
-    parser.add_argument(
-        '--smoothing_inp_alpha', type=float, default=0.8,
-        help='The alpha value for smoothing (default: 0.7)'
     )
     
     ##COMP##
     parser.add_argument(
         '--compensation', action='store_true', default=False,
     )
-    # parser.add_argument(
-    #     '--comp_in_decay', type=float, default=0.1
-    # )
     parser.add_argument(
         '--comp_out_decay', type=float, default=0.1
-    )
-    parser.add_argument(
-        '--comp_ssd_decay', type=float, default=0.1
     )
     parser.add_argument(
         '--comp_sam_num', type=int, default=512
@@ -161,15 +124,7 @@ def get_quantize_options(parser):
     )
     ##COMP##
     
-    #############################################################proj_method########################################################
-    parser.add_argument('--lowrank', action='store_true',
-                        help='activate low-rank path (default rank=32)')
-    parser.add_argument('--lr_rank', type=int, default=32,
-                        help='rank K for the low-rank path')
-    parser.add_argument('--mixed_pre', action='store_true',)
-    parser.add_argument('--squeeze', action='store_true',)
 
-    #################################################################################################################################
 def parse_options():
     parser = argparse.ArgumentParser()
     parser.add_argument(

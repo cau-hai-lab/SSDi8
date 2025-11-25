@@ -27,8 +27,7 @@ for model in "${MODELS[@]}"; do
             --a_bits 8 \
             --apply_hadamard \
             --compensation \
-            --comp_ssd_decay 0.16 \
-            --comp_out_decay 0.16 \
+            --comp_out_decay 0.5 \
             2>&1 | tee "logs/88SSDim${modelname}${BS}.log"
     done
 done

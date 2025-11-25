@@ -1,3 +1,7 @@
+"""
+This file is a modified version of the original file from the Quamba repo.
+https://github.com/enyac-group/Quamba
+"""
 import os
 import shutil
 import logging
