@@ -1,7 +1,9 @@
+"""
+This file is a modified version of the original file from the Quamba repo.
+https://github.com/enyac-group/Quamba
+"""
+
 # SSDi8
-
-
-
 - 🔧 Supports W4A8 / W8A8 for Mamba2
 
 
@@ -9,27 +11,25 @@
 ## Setup
 
 ### Hardware Requirements
-- NVIDIA GPU Ampere architecture or above
+- NVIDIA GPU Ampere architecture 
 
 ### Software Requirements
 - CUDA 12.1 or above
 - CMAKE version 3.22.1 or above
 
-### Clone Quamba
+### Clone SSDi8
 - Clone the repository with all submodules:
 ```bash
-git clone --recurse-submodules git@github.com:enyac-group/Quamba.git
-# or
 cd SSDi8
 ###Need SSH key
 git submodule update --init --recursive
 ```
 
-- Create Quamba conda environment
+- Create conda environment
 ```bash
 cd SSDi8
-conda create -n quamba python=3.10
-conda activate quamba
+conda create -n ssdi8 python=3.10
+conda activate ssdi8
 pip install -r requirements.txt
 ```
 
@@ -50,7 +50,6 @@ pip install 3rdparty/lm-evaluation-harness
 
 - Install mamba
 ```bash
-# set force build to use the commit for Quamba
 export MAMBA_FORCE_BUILD=TRUE
 pip install 3rdparty/mamba
 ```
@@ -69,7 +68,6 @@ pip install -e 3rdparty/Megatron-LM
 # run `pip install -r requirements.txt` again if necessary
 ```
 
-### Build Quamba
 ```bash
 pip install .
 pip uninstall -y causal-conv1d causal_conv1d || true
@@ -114,19 +112,14 @@ After running, you will see a directory called `mamba2-8b-converted` has been cr
 
 For example:
 ```bash
-# use the `--pretrained_dir` flag to store the quantized model
 python main.py pretrained_models/mamba2-8b-converted \
 --batch_size 16 \
 --eval_zero_shot \
 --task_list lambada_openai \
 --quantize \
---group_heads \
 --apply_gptq \
---quantize_embedding \
---quantize_lm_head \
 --w_bits 4 \
 --a_bits 8
---pretrained_dir ./pretrained_models \
 --log_dir logs
 ``` 
 
