@@ -1,7 +1,7 @@
-"""
+
 This file is a modified version of the original file from the Quamba repo.
 https://github.com/enyac-group/Quamba
-"""
+
 
 # SSDi8
 - 🔧 Supports W4A8 / W8A8 for Mamba2
